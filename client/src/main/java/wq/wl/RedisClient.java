@@ -17,16 +17,15 @@ import static wq.wl.util.IDGenerator.generateId;
  * @author: wangliang
  * @time: 2020-08-03
  */
-public class RedisClient implements LifeCycle{
+public class RedisClient implements LifeCycle {
 
 
-    private static ConcurrentMap<Long, ResultFuture<Message.Result>> commandFutrueContainer = Maps.newConcurrentMap();
-
-    private  Map<String, String> configMap ;
-    NettyClient nettyClient ;
+    public static ResultFuture<Message.Result> getFuture(long id) {
+        return commandFutrueContainer.get(id);
+    }
 
     public RedisClient(Map<String, String> configMap) {
-        configMap.put("server.port","9876");
+        configMap.put("server.port", "9876");
         this.configMap = configMap;
         this.nettyClient = new NettyClient(configMap);
         try {
@@ -37,8 +36,7 @@ public class RedisClient implements LifeCycle{
         }
     }
 
-
-    public boolean set(String key, String value) throws Exception{
+    public boolean set(String key, String value) throws Exception {
         long id = generateId();
         ResultFuture<Message.Result> resultFuture = new ResultFuture<>();
         commandFutrueContainer.put(id, resultFuture);
@@ -51,7 +49,6 @@ public class RedisClient implements LifeCycle{
         Message.Result result = resultFuture.get();
         return result.getResCode().equals(Message.ResCode.RES_SUCCESS);
     }
-
 
     public String get(String key) throws ExecutionException, InterruptedException {
         long id = generateId();
@@ -72,11 +69,6 @@ public class RedisClient implements LifeCycle{
         }
     }
 
-    public static ResultFuture<Message.Result> getFuture(long id) {
-        return commandFutrueContainer.get(id);
-    }
-
-
     @Override
     public void start() throws Throwable {
         nettyClient.start();
@@ -86,6 +78,12 @@ public class RedisClient implements LifeCycle{
     public void stop() throws Throwable {
         nettyClient.stop();
     }
+
+    NettyClient nettyClient;
+
+    private Map<String, String> configMap;
+
+    private static ConcurrentMap<Long, ResultFuture<Message.Result>> commandFutrueContainer = Maps.newConcurrentMap();
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandEncoder.class);
 

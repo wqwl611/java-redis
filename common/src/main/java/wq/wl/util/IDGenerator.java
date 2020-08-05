@@ -4,13 +4,29 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class IDGenerator {
 
-    private static final long SEQUENCE_BIT_NUM = 12L;
+    public static long generateId() {
+        return instance().getId();
+    }
 
-    private static final long NODE_ID_BIT_NUM = 10L;
+    public static IDGenerator instance() {
+        return instance;
+    }
 
-    private static final long MAX_SEQUENCE = 4096L;
+    public IDGenerator(long nodeId) {
+        this.nodeId = nodeId;
+    }
 
-    private static final long MAX_NODE_ID = 1024L;
+    private long tilNextMillis(long lastTimestamp) {
+        long timestamp = System.currentTimeMillis();
+        while (timestamp <= lastTimestamp) {
+            timestamp = System.currentTimeMillis();
+        }
+        return timestamp;
+    }
+
+    private IDGenerator() {
+        this(1L);
+    }
 
     private AtomicLong sequence = new AtomicLong(0);
 
@@ -20,21 +36,13 @@ public class IDGenerator {
 
     private static IDGenerator instance = new IDGenerator();
 
-    public static long generateId() {
-        return instance().getId();
-    }
+    private static final long SEQUENCE_BIT_NUM = 12L;
 
-    public static IDGenerator instance() {
-        return instance;
-    }
+    private static final long NODE_ID_BIT_NUM = 10L;
 
-    private IDGenerator() {
-        this(1L);
-    }
+    private static final long MAX_SEQUENCE = 4096L;
 
-    public IDGenerator(long nodeId) {
-        this.nodeId = nodeId;
-    }
+    private static final long MAX_NODE_ID = 1024L;
 
     public long getId() {
         long currentTimestamp = System.currentTimeMillis();
@@ -51,14 +59,6 @@ public class IDGenerator {
                 | (nodeId << SEQUENCE_BIT_NUM)
                 | sequence.getAndIncrement();
         return id;
-    }
-
-    private long tilNextMillis(long lastTimestamp) {
-        long timestamp = System.currentTimeMillis();
-        while (timestamp <= lastTimestamp) {
-            timestamp = System.currentTimeMillis();
-        }
-        return timestamp;
     }
 
 }

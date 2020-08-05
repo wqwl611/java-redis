@@ -24,20 +24,11 @@ import java.util.concurrent.ExecutionException;
  */
 public class NettyClient implements LifeCycle {
 
-    private Map<String, String> config;
-
-    private int port;
-
-    private String host;
-
-    private Channel channel;
-
     public NettyClient(Map<String, String> config) {
         this.config = config;
         port = Integer.parseInt(config.getOrDefault("server.port", "09"));
         host = config.getOrDefault("server.host", "127.0.0.1");
     }
-
 
     @Override
     public void start() throws Throwable {
@@ -67,5 +58,13 @@ public class NettyClient implements LifeCycle {
         channel.eventLoop().parent().shutdownGracefully();
         channel.close();
     }
+
+    private Map<String, String> config;
+
+    private int port;
+
+    private String host;
+
+    private Channel channel;
 
 }

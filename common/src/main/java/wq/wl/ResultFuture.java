@@ -14,14 +14,26 @@ import java.util.concurrent.TimeoutException;
  */
 public class ResultFuture<T> implements Future<T> {
 
-    private CountDownLatch countDownLatch = new CountDownLatch(1);
-
-    private T result;
-
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         return false;
     }
+
+    @Override
+    public T get() throws InterruptedException, ExecutionException {
+        countDownLatch.await();
+        return result;
+    }
+
+    @Override
+    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+        countDownLatch.await(timeout, unit);
+        return result;
+    }
+
+    private CountDownLatch countDownLatch = new CountDownLatch(1);
+
+    private T result;
 
     @Override
     public boolean isCancelled() {
@@ -36,17 +48,5 @@ public class ResultFuture<T> implements Future<T> {
     public void setResult(T result) {
         this.result = result;
         countDownLatch.countDown();
-    }
-
-    @Override
-    public T get() throws InterruptedException, ExecutionException {
-        countDownLatch.await();
-        return result;
-    }
-
-    @Override
-    public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-        countDownLatch.await(timeout, unit);
-        return result;
     }
 }

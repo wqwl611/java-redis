@@ -19,11 +19,6 @@ import javax.annotation.PostConstruct;
 @Component
 public class KvDb {
 
-    private RocksDB rocksDB;
-
-    @Value("${rocksdb.path}")
-    private String path;
-
     @PostConstruct
     public void init() {
         // path = "/tmp/tmp-kv-db";
@@ -47,12 +42,17 @@ public class KvDb {
     }
 
     public void set(String key, String value) throws RocksDBException {
-        // rocksDB.put(key.getBytes(), value.getBytes());
+        rocksDB.put(key.getBytes(), value.getBytes());
     }
 
     public void del(String key) throws RocksDBException {
         rocksDB.delete(key.getBytes());
     }
+
+    private RocksDB rocksDB;
+
+    @Value("${rocksdb.path}")
+    private String path;
 
     private static final Logger LOG = LoggerFactory.getLogger(KvDb.class);
 

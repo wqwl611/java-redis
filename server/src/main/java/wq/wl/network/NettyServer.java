@@ -28,12 +28,11 @@ import java.util.Map;
 public class NettyServer implements LifeCycle {
 
 
-    @Autowired
-    private ServerHandler serverHandler;
-
-    private Map<String, String> serverConfig;
-
     public NettyServer() {
+    }
+
+    public NettyServer(Map<String, String> serverConfig) {
+        this.serverConfig = serverConfig;
     }
 
     @PostConstruct
@@ -44,10 +43,6 @@ public class NettyServer implements LifeCycle {
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
-    }
-
-    public NettyServer(Map<String, String> serverConfig) {
-        this.serverConfig = serverConfig;
     }
 
     @Override
@@ -86,6 +81,11 @@ public class NettyServer implements LifeCycle {
     public void stop() throws Throwable {
 
     }
+
+    @Autowired
+    private ServerHandler serverHandler;
+
+    private Map<String, String> serverConfig;
 
     private static final Logger LOG = LoggerFactory.getLogger(ServerHandler.class);
 

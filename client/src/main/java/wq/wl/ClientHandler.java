@@ -14,8 +14,6 @@ import wq.wl.message.Message;
  * @time: 2020-08-03
  */
 public class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
-    private static final Logger LOG = LoggerFactory.getLogger(ClientHandler.class);
-
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
@@ -25,6 +23,8 @@ public class ClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
         setFutureResult(result);
         LOG.debug("receive result: [{}]", result.toString());
     }
+
+    private static final Logger LOG = LoggerFactory.getLogger(ClientHandler.class);
 
     private void setFutureResult(Message.Result result) {
         long commandId = result.getCommandId();

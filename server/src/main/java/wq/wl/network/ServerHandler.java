@@ -10,12 +10,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import wq.wl.kvdb.KvDb;
 import wq.wl.message.Message;
-import wq.wl.util.IDGenerator;
+
+import static wq.wl.message.Message.ResCode.RES_FAIL;
+import static wq.wl.message.Message.ResCode.RES_SUCCESS;
 
 /**
  * Description:
+ * 线程共享的对象，注意线程安全
  *
  * @author: wangliang
  * @time: 2020-08-03
@@ -23,19 +27,6 @@ import wq.wl.util.IDGenerator;
 @Component
 @ChannelHandler.Sharable
 public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
-
-    @Autowired
-    private KvDb kvDb;
-
-    @Override
-    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
-        LOG.debug("server receive data.");
-        Message.Command command = parseCommand(msg);
-        LOG.debug("receive command: [{}]", command.toString());
-        Message.Result result = processCommand(command);
-        ctx.writeAndFlush(result);
-        LOG.debug("server response send.");
-    }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -51,12 +42,19 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         LOG.info("close one connection.");
-
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         LOG.info("close one connection.");
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        Message.Command command = parseCommand(msg);
+        LOG.debug("receive command: [{}]", command.toString());
+        Message.Result result = processCommand(command);
+        ctx.writeAndFlush(result);
     }
 
     private Message.Result processCommand(Message.Command command) {
@@ -68,16 +66,10 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
             case SET:
                 return processSet(command);
             default:
-                LOG.error("unknown command type.");
-                return Message.Result.newBuilder()
-                        .setCommandId(IDGenerator.instance().getId())
-                        .setResCode(Message.ResCode.RES_FAIL)
-                        .setResMsg("unknown command type.")
-                        .build();
+                return failResultBuilder.get().setCommandId(command.getCommandId())
+                        .setResMsg("unknown command type.").build();
         }
     }
-
-    Message.Result.Builder failResultBuilder = Message.Result.newBuilder().setResCode(Message.ResCode.RES_FAIL);
 
     private Message.Result processSet(Message.Command command) {
         try {
@@ -86,15 +78,14 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
             return getFailResult(command, e);
         }
         Message.Result result = Message.Result.newBuilder()
-                .setResCode(Message.ResCode.RES_SUCCESS)
+                .setResCode(RES_SUCCESS)
                 .setCommandId(command.getCommandId())
-                // .setResMsg("set success.")
                 .build();
         return result;
     }
 
     private Message.Result getFailResult(Message.Command command, RocksDBException e) {
-        return failResultBuilder.setResMsg(e.getMessage()).setCommandId(command.getCommandId()).build();
+        return failResultBuilder.get().setResMsg(e.getMessage()).setCommandId(command.getCommandId()).build();
     }
 
     private Message.Result processDel(Message.Command command) {
@@ -105,8 +96,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         }
         Message.Result result = Message.Result.newBuilder()
                 .setCommandId(command.getCommandId())
-                .setResCode(Message.ResCode.RES_SUCCESS)
-                // .setResMsg("del success.")
+                .setResCode(RES_SUCCESS)
                 .build();
         return result;
     }
@@ -118,10 +108,12 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         } catch (RocksDBException e) {
             return getFailResult(command, e);
         }
-        return Message.Result.newBuilder()
-                .setCommandId(command.getCommandId())
-                .setResCode(Message.ResCode.RES_SUCCESS)
-                .setResult(result)
+        // 如果不存在值，返回空字符串
+        if (StringUtils.isEmpty(result)) {
+            result = "";
+        }
+        return Message.Result.newBuilder().setCommandId(command.getCommandId())
+                .setResCode(RES_SUCCESS).setResult(result)
                 .build();
     }
 
@@ -140,6 +132,12 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         msg.readBytes(bytes);
         return bytes;
     }
+
+    @Autowired
+    private KvDb kvDb;
+
+    private ThreadLocal<Message.Result.Builder> failResultBuilder =
+            ThreadLocal.withInitial(() -> Message.Result.newBuilder().setResCode(RES_FAIL));
 
     private static final Logger LOG = LoggerFactory.getLogger(ServerHandler.class);
 
