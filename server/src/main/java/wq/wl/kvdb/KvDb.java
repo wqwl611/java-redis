@@ -5,7 +5,10 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
 
 /**
  * Description:
@@ -15,14 +18,15 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class KvDb {
+
     private RocksDB rocksDB;
 
-    public KvDb() {
-        this("");
-    }
+    @Value("${rocksdb.path}")
+    private String path;
 
-    public KvDb(String path) {
-        path = "/tmp/tmp-kv-db";
+    @PostConstruct
+    public void init() {
+        // path = "/tmp/tmp-kv-db";
         RocksDB.loadLibrary();
         Options options = new Options();
         options.setCreateIfMissing(true);
@@ -30,38 +34,24 @@ public class KvDb {
             rocksDB = RocksDB.open(options, path);
         } catch (RocksDBException e) {
             LOG.error("RocksDB open error: ", e);
-            // todo
             System.exit(-1);
         }
     }
 
-    public String get(String key) {
-        try {
-            byte[] bytes = rocksDB.get(key.getBytes());
-            if (bytes == null) {
-                return "null";
-            }
-            return new String(bytes);
-        } catch (RocksDBException e) {
-            e.printStackTrace();
+    public String get(String key) throws RocksDBException {
+        byte[] bytes = rocksDB.get(key.getBytes());
+        if (bytes == null) {
+            return null;
         }
-        return null;
+        return new String(bytes);
     }
 
-    public void set(String key, String value) {
-        try {
-            rocksDB.put(key.getBytes(), value.getBytes());
-        } catch (RocksDBException e) {
-            e.printStackTrace();
-        }
+    public void set(String key, String value) throws RocksDBException {
+        // rocksDB.put(key.getBytes(), value.getBytes());
     }
 
-    public void del(String key) {
-        try {
-            rocksDB.delete(key.getBytes());
-        } catch (RocksDBException e) {
-            e.printStackTrace();
-        }
+    public void del(String key) throws RocksDBException {
+        rocksDB.delete(key.getBytes());
     }
 
     private static final Logger LOG = LoggerFactory.getLogger(KvDb.class);

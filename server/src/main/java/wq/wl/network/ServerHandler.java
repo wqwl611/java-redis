@@ -2,10 +2,10 @@ package wq.wl.network;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,10 +29,12 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
+        LOG.debug("server receive data.");
         Message.Command command = parseCommand(msg);
         LOG.debug("receive command: [{}]", command.toString());
         Message.Result result = processCommand(command);
         ctx.writeAndFlush(result);
+        LOG.debug("server response send.");
     }
 
     @Override
@@ -48,18 +50,13 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-        // super.channelUnregistered(ctx);
         LOG.info("close one connection.");
 
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        Channel channel = ctx.channel();
-        Channel parent = channel.parent();
         LOG.info("close one connection.");
-        // ctx.channel().pipeline().
-        // ctx.close();
     }
 
     private Message.Result processCommand(Message.Command command) {
@@ -80,8 +77,14 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         }
     }
 
+    Message.Result.Builder failResultBuilder = Message.Result.newBuilder().setResCode(Message.ResCode.RES_FAIL);
+
     private Message.Result processSet(Message.Command command) {
-        kvDb.set(command.getKey(), command.getValue());
+        try {
+            kvDb.set(command.getKey(), command.getValue());
+        } catch (RocksDBException e) {
+            return getFailResult(command, e);
+        }
         Message.Result result = Message.Result.newBuilder()
                 .setResCode(Message.ResCode.RES_SUCCESS)
                 .setCommandId(command.getCommandId())
@@ -90,8 +93,16 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         return result;
     }
 
+    private Message.Result getFailResult(Message.Command command, RocksDBException e) {
+        return failResultBuilder.setResMsg(e.getMessage()).setCommandId(command.getCommandId()).build();
+    }
+
     private Message.Result processDel(Message.Command command) {
-        kvDb.del(command.getKey());
+        try {
+            kvDb.del(command.getKey());
+        } catch (RocksDBException e) {
+            return getFailResult(command, e);
+        }
         Message.Result result = Message.Result.newBuilder()
                 .setCommandId(command.getCommandId())
                 .setResCode(Message.ResCode.RES_SUCCESS)
@@ -101,7 +112,12 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     }
 
     private Message.Result processGet(Message.Command command) {
-        String result = kvDb.get(command.getKey());
+        String result = null;
+        try {
+            result = kvDb.get(command.getKey());
+        } catch (RocksDBException e) {
+            return getFailResult(command, e);
+        }
         return Message.Result.newBuilder()
                 .setCommandId(command.getCommandId())
                 .setResCode(Message.ResCode.RES_SUCCESS)

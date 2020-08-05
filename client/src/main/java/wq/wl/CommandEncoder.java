@@ -27,9 +27,10 @@ public class CommandEncoder extends MessageToMessageEncoder<Message.Command> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, Message.Command msg, List<Object> out) throws Exception {
-        Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
+        // Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
         ByteBuf byteBuf = serialize(msg);
         out.add(byteBuf);
+        LOG.debug("start to send. id: {}", msg.getCommandId());
     }
 
 }
