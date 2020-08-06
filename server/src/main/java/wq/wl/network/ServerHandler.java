@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,7 +73,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
     private Message.Result processSet(Message.Command command) {
         try {
             kvDb.set(command.getKey(), command.getValue());
-        } catch (RocksDBException e) {
+        } catch (Exception e) {
             return getFailResult(command, e);
         }
         Message.Result result = Message.Result.newBuilder()
@@ -84,14 +83,14 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         return result;
     }
 
-    private Message.Result getFailResult(Message.Command command, RocksDBException e) {
+    private Message.Result getFailResult(Message.Command command, Exception e) {
         return failResultBuilder.get().setResMsg(e.getMessage()).setCommandId(command.getCommandId()).build();
     }
 
     private Message.Result processDel(Message.Command command) {
         try {
             kvDb.del(command.getKey());
-        } catch (RocksDBException e) {
+        } catch (Exception e) {
             return getFailResult(command, e);
         }
         Message.Result result = Message.Result.newBuilder()
@@ -105,7 +104,7 @@ public class ServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         String result = null;
         try {
             result = kvDb.get(command.getKey());
-        } catch (RocksDBException e) {
+        } catch (Exception e) {
             return getFailResult(command, e);
         }
         // 如果不存在值，返回空字符串

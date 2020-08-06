@@ -16,9 +16,11 @@ public class RedisClientTest {
         configMap.put("server.port", "9876");
         RedisClient redisClient = new RedisClient(configMap);
         String s = redisClient.get("90");
-        for (int i = 0; i < 100; i++) {
+        boolean set = redisClient.set("你好", "你好");
+        String 你好 = redisClient.get("你好");
+        for (int i = 0; i < 100000000; i++) {
             long startTime = System.currentTimeMillis();
-            redisClient.set("xxx" + i, "hello");
+            redisClient.set("xxx你好" + i, "hello");
             System.out.println("cost time: " + (System.currentTimeMillis() - startTime));
         }
         String hello = redisClient.get("xxx");
